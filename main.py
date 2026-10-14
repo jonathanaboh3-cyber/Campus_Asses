@@ -41,7 +41,7 @@ def create_request(fellow_id, card_type):
         "fellow_id": fellow_id,
         "card_type": card_type,
         "status": "requested",
-        "approved_by": ""
+        "approved_by": None
     }
 
     # Store the request
@@ -81,3 +81,8 @@ try:
     validate_card_type(123)
 except ValueError as error:
     print("Wrong input type rejected:", error)
+
+# Test creating our first request
+first_request = create_request("F001", "student")
+
+print(first_request)

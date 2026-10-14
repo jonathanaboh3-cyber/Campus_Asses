@@ -1,0 +1,37 @@
+{
+    "A001": {
+        "id": "A001",
+        "fellow_id": "F001",
+        "card_type": "student",
+        "status": "requested",
+        "approved_by": null
+    },
+    "A002": {
+        "id": "A002",
+        "fellow_id": "F001",
+        "card_type": "student",
+        "status": "requested",
+        "approved_by": null
+    },
+    "A003": {
+        "id": "A003",
+        "fellow_id": "F001",
+        "card_type": "student",
+        "status": "requested",
+        "approved_by": null
+    },
+    "A004": {
+        "id": "A004",
+        "fellow_id": "F001",
+        "card_type": "student",
+        "status": "requested",
+        "approved_by": null
+    },
+    "A005": {
+        "id": "A005",
+        "fellow_id": "F001",
+        "card_type": "student",
+        "status": "requested",
+        "approved_by": null
+    }
+}

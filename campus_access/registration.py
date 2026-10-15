@@ -10,7 +10,7 @@ next_id = 1
 ALLOWED_CARD_TYPES = {"visitor", "student", "staff"}
 ALLOWED_STATUSES = {"requested", "approved", "issued", "returned"}
 REQUIRED_FIELDS = {"id", "fellow_id", "card_type", "status", "approved_by"}
-MAX_ID_NUMBER = 999  # IDs look like A001..A999
+MAX_ID_NUMBER = 999
 
 
 def validate_fellow_id(fellow_id):
@@ -52,6 +52,12 @@ def create_request(fellow_id, card_type):
     if next_id > MAX_ID_NUMBER:
         raise ValueError("Request ID limit reached")
 
+    while f"A{next_id:03d}" in requests:
+        next_id += 1
+
+    if next_id > MAX_ID_NUMBER:
+        raise ValueError("Request ID limit reached")
+
     request_id = f"A{next_id:03d}"
     next_id += 1
 
@@ -64,7 +70,8 @@ def create_request(fellow_id, card_type):
     }
 
     requests[request_id] = request
-    return request
+
+    return request.copy()
 
 
 def get_request(request_id):
@@ -73,29 +80,33 @@ def get_request(request_id):
     if request_id not in requests:
         raise ValueError("Request not found")
 
-    return requests[request_id]
+    return requests[request_id].copy()
 
 
 def save_requests(path="requests.json"):
-    # Write to a temp file first so a failed save can't damage a valid file
     temp_path = path + ".tmp"
+
     try:
         with open(temp_path, "w", encoding="utf-8") as file:
             json.dump(requests, file, indent=4)
+
         os.replace(temp_path, path)
-    except Exception:
+
+    except (OSError, TypeError, ValueError):
         if os.path.exists(temp_path):
             os.remove(temp_path)
         raise
 
 
 def _reject_duplicate_keys(pairs):
-    # json.load silently keeps the LAST duplicate key, so we check ourselves
     result = {}
+
     for key, value in pairs:
         if key in result:
             raise ValueError(f"Duplicate key in file: {key}")
+
         result[key] = value
+
     return result
 
 
@@ -110,10 +121,15 @@ def load_requests(path="requests.json"):
     try:
         with open(path, "r", encoding="utf-8") as file:
             loaded_requests = json.load(
-                file, object_pairs_hook=_reject_duplicate_keys
+                file,
+                object_pairs_hook=_reject_duplicate_keys,
             )
+
     except json.JSONDecodeError as error:
         raise ValueError("Invalid JSON file") from error
+
+    except UnicodeDecodeError as error:
+        raise ValueError("Invalid file encoding") from error
 
     if not isinstance(loaded_requests, dict):
         raise ValueError("Requests file must contain a dictionary")
@@ -124,31 +140,44 @@ def load_requests(path="requests.json"):
         if not isinstance(request, dict):
             raise ValueError("Each request must be a dictionary")
 
-        if set(request) != REQUIRED_FIELDS:
+        if set(request.keys()) != REQUIRED_FIELDS:
             raise ValueError("Request has missing or unexpected fields")
 
         if request_id != request["id"]:
-            raise ValueError("Request ID does not match its dictionary key")
+            raise ValueError(
+                "Request ID does not match its dictionary key"
+            )
 
         validate_fellow_id(request["fellow_id"])
         validate_card_type(request["card_type"])
 
-        if request["status"] not in ALLOWED_STATUSES:
+        status = request["status"]
+
+        if not isinstance(status, str) or status not in ALLOWED_STATUSES:
             raise ValueError("Invalid request status")
 
-        if request["status"] == "requested":
-            if request["approved_by"] is not None:
-                raise ValueError("Requested records cannot have an approver")
-        elif (
-            not isinstance(request["approved_by"], str)
-            or not request["approved_by"].strip()
-        ):
-            raise ValueError("Approved records must have a valid approver")
+        approved_by = request["approved_by"]
 
-    # Only replace in-memory data after the whole file passed validation
+        if status == "requested":
+            if approved_by is not None:
+                raise ValueError(
+                    "Requested records cannot have an approver"
+                )
+
+        elif (
+            not isinstance(approved_by, str)
+            or not approved_by.strip()
+        ):
+            raise ValueError(
+                "Approved records must have a valid approver"
+            )
+
+    # Replace memory only after all records pass validation
     requests = loaded_requests
 
     if requests:
-        next_id = max(int(request_id[1:]) for request_id in requests) + 1
+        next_id = max(
+            int(request_id[1:]) for request_id in requests
+        ) + 1
     else:
         next_id = 1

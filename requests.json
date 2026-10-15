@@ -33,5 +33,12 @@
         "card_type": "student",
         "status": "requested",
         "approved_by": null
+    },
+    "A006": {
+        "id": "A006",
+        "fellow_id": "F001",
+        "card_type": "student",
+        "status": "requested",
+        "approved_by": null
     }
 }
